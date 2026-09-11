@@ -4,6 +4,8 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 app.use(cors());
@@ -11,11 +13,14 @@ app.use(bodyParser.json());
 app.use(express.static('public'));
 
 const PAGE_ID = '103582818232042';
-const PAGE_TOKEN = process.env.PAGE_ACCESS_TOKEN;
+let PAGE_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'printing_pixels_verify_2026';
 
-// ===== FAQ BRAIN from printing-pixels.com =====
-const BRAIN = {
+let BRAIN_FILE = path.join(__dirname, 'brain.json');
+let LEADS_FILE = path.join(__dirname, 'leads.json');
+
+// Load or create brain
+let BRAIN = {
   business: 'PRINTING PIXELS, VGM Building KM11 Sasa, Davao City',
   tagline: 'Your ideas, made visible.',
   workflow: ['Tell us the idea (size, qty, deadline)', 'Review & quote', 'Approve proof', 'We make it', 'Pickup or delivery'],
@@ -31,68 +36,51 @@ const BRAIN = {
     design: "Yes, we do layout & design support. Send logo, copy, size, and references so we can assess.",
     install: "Yes, installation available for signs, wall/glass decals, vehicle graphics around Davao City.",
     payment: "We accept GCash, Maya, bank transfer, cash, cheque. Final instructions are in your quotation."
-  }
+  },
+  customReplies: {}
 };
 
+try {
+  if (fs.existsSync(BRAIN_FILE)) {
+    const loaded = JSON.parse(fs.readFileSync(BRAIN_FILE,'utf8'));
+    BRAIN = {...BRAIN, ...loaded};
+  }
+} catch(e){ console.log('No brain.json yet'); }
+
+let leads = [];
+try { if (fs.existsSync(LEADS_FILE)) leads = JSON.parse(fs.readFileSync(LEADS_FILE,'utf8')); } catch(e){ leads=[]; }
+
+function saveBrain(){
+  fs.writeFileSync(BRAIN_FILE, JSON.stringify(BRAIN,null,2));
+}
+function saveLeads(){
+  fs.writeFileSync(LEADS_FILE, JSON.stringify(leads.slice(-500),null,2));
+}
+
 function generateReply(text) {
-  const t = text.toLowerCase();
+  const t = (text||'').toLowerCase();
+  // check custom trained replies first
+  for (const key in BRAIN.customReplies) {
+    if (t.includes(key.toLowerCase())) return BRAIN.customReplies[key];
+  }
   let reply = '';
   if (t.includes('tarpaulin') || t.includes('tarp')) {
-    reply = `Hello! For tarpaulin printing (Printing Pixels, Sasa Davao).
-
-Our flow: ${BRAIN.workflow.join(' -> ')}
-
-Can you share size (ft), quantity, eyelet or no, and deadline? I'll send clear quotation. We have pickup at VGM Bldg Sasa or delivery.
-
-Payment: ${BRAIN.payment}`;
+    reply = `Hello! For tarpaulin printing (Printing Pixels, Sasa Davao).\n\nOur flow: ${BRAIN.workflow.join(' -> ')}\n\nCan you share size (ft), quantity, eyelet or no, and deadline? I'll send clear quotation. We have pickup at VGM Bldg Sasa or delivery.\n\nPayment: ${BRAIN.payment}`;
   } else if (t.includes('acrylic') || t.includes('lightbox') || t.includes('signage') || t.includes('sintra')) {
-    reply = `For signage (acrylic/lightbox/Sintra) - our specialty at Printing Pixels.
-
-${BRAIN.services.signage}
-
-Share: size (2x3ft etc), indoor/outdoor, lighted or not, and reference photo. We check specs and send quotation + lead time. Proof approval first before production.
-
-Installation available in Davao.`;
+    reply = `For signage (acrylic/lightbox/Sintra) - our specialty at Printing Pixels.\n\n${BRAIN.services.signage}\n\nShare: size (2x3ft etc), indoor/outdoor, lighted or not, and reference photo. We check specs and send quotation + lead time. Proof approval first before production.\n\nInstallation available in Davao.`;
   } else if (t.includes('dtf') || t.includes('shirt') || t.includes('tshirt') || t.includes('t-shirt')) {
-    reply = `DTF / Shirt printing - got it!
-
-We do: ${BRAIN.services.custom}
-
-How many pcs, sizes, and do you have artwork ready? Send artwork and deadline. We will quote per pc + bulk rate. Rush available.
-
-Pickup: VGM Bldg KM11 Sasa, Davao`;
+    reply = `DTF / Shirt printing - got it!\n\nWe do: ${BRAIN.services.custom}\n\nHow many pcs, sizes, and do you have artwork ready? Send artwork and deadline. We will quote per pc + bulk rate. Rush available.\n\nPickup: VGM Bldg KM11 Sasa, Davao`;
   } else if (t.includes('sticker') || t.includes('label') || t.includes('vinyl') || t.includes('decal')) {
-    reply = `Sticker & label printing - waterproof vinyl available.
-
-${BRAIN.services.stickers}
-
-Tell me: size, shape (die-cut?), quantity, waterproof or regular, and where to apply (bottle, wall, vehicle). We'll send quotation with material recommendation.`;
+    reply = `Sticker & label printing - waterproof vinyl available.\n\n${BRAIN.services.stickers}\n\nTell me: size, shape (die-cut?), quantity, waterproof or regular, and where to apply (bottle, wall, vehicle). We'll send quotation with material recommendation.`;
   } else if (t.includes('price') || t.includes('hm') || t.includes('magkano') || t.includes('how much')) {
-    reply = `Hi! Thanks for reaching Printing Pixels - ${BRAIN.tagline}
-
-To give accurate price, can you tell me:
-1. Product type (tarp, sticker, signage, shirts, mugs etc)
-2. Size & quantity
-3. Deadline
-
-Workflow: ${BRAIN.workflow.join(' -> ')}
-
-We send quotation after checking specs. ${BRAIN.quickReplies.payment}`;
+    reply = `Hi! Thanks for reaching Printing Pixels - ${BRAIN.tagline}\n\nTo give accurate price, can you tell me:\n1. Product type (tarp, sticker, signage, shirts, mugs etc)\n2. Size & quantity\n3. Deadline\n\nWorkflow: ${BRAIN.workflow.join(' -> ')}\n\nWe send quotation after checking specs. ${BRAIN.quickReplies.payment}`;
   } else {
-    reply = `Hello! Printing Pixels here - ${BRAIN.business}. ${BRAIN.tagline}
-
-We make: 
-01 ${BRAIN.services.essentials}
-02 ${BRAIN.services.stickers}
-03 ${BRAIN.services.signage}
-04 ${BRAIN.services.custom}
-
-Tell me your idea with size, qty, deadline and I'll send clear quotation. Proof approval first. Pickup/delivery available.`;
+    reply = `Hello! Printing Pixels here - ${BRAIN.business}. ${BRAIN.tagline}\n\nWe make: \n01 ${BRAIN.services.essentials}\n02 ${BRAIN.services.stickers}\n03 ${BRAIN.services.signage}\n04 ${BRAIN.services.custom}\n\nTell me your idea with size, qty, deadline and I'll send clear quotation. Proof approval first. Pickup/delivery available.`;
   }
   return reply;
 }
 
-// Webhook verification (for Meta)
+// Webhook verification
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
@@ -115,14 +103,16 @@ app.post('/webhook', async (req, res) => {
           const senderId = event.sender.id;
           const text = event.message.text;
           const reply = generateReply(text);
-          // Log lead
+          leads.unshift({time:new Date().toISOString(), source:'Facebook', senderId, text, reply});
+          saveLeads();
           console.log(`Lead from ${senderId}: ${text}`);
-          // Send reply via Graph API
           try {
-            await axios.post(`https://graph.facebook.com/v20.0/${PAGE_ID}/messages?access_token=${PAGE_TOKEN}`, {
-              recipient: { id: senderId },
-              message: { text: reply }
-            });
+            if (PAGE_TOKEN) {
+              await axios.post(`https://graph.facebook.com/v20.0/${PAGE_ID}/messages?access_token=${PAGE_TOKEN}`, {
+                recipient: { id: senderId },
+                message: { text: reply }
+              });
+            }
           } catch (e) {
             console.error('Send error', e.response?.data || e.message);
           }
@@ -135,18 +125,49 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// Website chat endpoint (for printing-pixels.com widget)
+// Website chat
 app.post('/chat', async (req, res) => {
   const { message, name, contact } = req.body;
   const reply = generateReply(message || '');
-  // TODO: Save to DB / Google Sheet
+  leads.unshift({time:new Date().toISOString(), source:'Website', senderId: contact||name||'web', text: message, reply});
+  saveLeads();
   console.log(`Website lead: ${name} ${contact} - ${message}`);
   res.json({ reply, workflow: BRAIN.workflow, payment: BRAIN.payment });
 });
 
-app.get('/', (req, res) => {
-  res.send(`Printing Pixels Bot Running - Page ${PAGE_ID} - ${BRAIN.tagline}`);
+// API for dashboard
+app.get('/api/brain', (req,res)=> res.json(BRAIN));
+app.post('/api/brain', (req,res)=>{
+  BRAIN = {...BRAIN, ...req.body};
+  saveBrain();
+  console.log('Brain updated');
+  res.json({ok:true, brain: BRAIN});
 });
+app.get('/api/leads', (req,res)=> res.json(leads.slice(0,200)));
+app.get('/api/status', (req,res)=> res.json({
+  pageId: PAGE_ID,
+  hasToken: !!PAGE_TOKEN,
+  verifyToken: VERIFY_TOKEN,
+  webhookUrl: `https://${req.get('host')}/webhook`,
+  botUrl: `https://${req.get('host')}/`,
+  leadsCount: leads.length
+}));
+
+app.get('/', (req, res) => {
+  res.send(`Printing Pixels Bot Running - Page ${PAGE_ID} - ${BRAIN.tagline} - Dashboard: /admin`);
+});
+
+// Admin dashboard
+app.get('/admin', (req,res)=>{
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+// serve admin.html if exists
+const adminPath = path.join(__dirname, 'admin.html');
+if (!fs.existsSync(adminPath)){
+  // create minimal admin if file missing
+  fs.writeFileSync(adminPath, '<h1>Admin - upload admin.html</h1>');
+}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Bot listening on ${PORT}`));

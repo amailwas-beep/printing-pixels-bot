@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Printing Pixels - Bot Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  body{font-family:Inter,sans-serif}
+  .mono{font-family:'JetBrains Mono',monospace}
+</style>
+</head>
+<body class="bg-[#0a0a0f] text-white min-h-screen">
+<!-- Header -->
+<header class="border-b border-white/10 bg-[#111118] sticky top-0 z-50 backdrop-blur">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center font-bold">P</div>
+      <div>
+        <h1 class="font-bold text-lg leading-none">Printing Pixels Bot</h1>
+        <p class="text-xs text-white/50 mono" id="statusUrl">loading...</p>
+      </div>
+      <span class="ml-4 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs border border-emerald-500/30"><i class="fa-solid fa-circle text-[8px] mr-1"></i> <span id="onlineStatus">Online</span></span>
+    </div>
+    <div class="flex items-center gap-3">
+      <a id="botLink" target="_blank" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-sm"><i class="fa-solid fa-arrow-up-right-from-square mr-1"></i> View Bot</a>
+      <a id="webhookLink" target="_blank" class="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-sm"><i class="fa-brands fa-facebook-messenger mr-1"></i> Test Messenger</a>
+    </div>
+  </div>
+</header>
+
+<div class="max-w-7xl mx-auto px-6 py-6 flex gap-6">
+  <!-- Sidebar -->
+  <aside class="w-60 shrink-0">
+    <nav class="space-y-1">
+      <button data-tab="train" class="tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-violet-600 text-white font-medium"><i class="fa-solid fa-brain mr-2"></i> Train Bot</button>
+      <button data-tab="leads" class="tab-btn w-full text-left px-4 py-2.5 rounded-xl hover:bg-white/5 text-white/70"><i class="fa-solid fa-inbox mr-2"></i> Leads <span id="leadsCount" class="ml-auto bg-white/10 px-2 py-0.5 rounded-full text-xs">0</span></button>
+      <button data-tab="custom" class="tab-btn w-full text-left px-4 py-2.5 rounded-xl hover:bg-white/5 text-white/70"><i class="fa-solid fa-lightbulb mr-2"></i> Custom Replies</button>
+      <button data-tab="settings" class="tab-btn w-full text-left px-4 py-2.5 rounded-xl hover:bg-white/5 text-white/70"><i class="fa-solid fa-gear mr-2"></i> Settings</button>
+    </nav>
+    <div class="mt-8 p-4 rounded-xl bg-[#16161f] border border-white/10">
+      <h4 class="text-sm font-semibold mb-2">Webhook URL</h4>
+      <code class="text-[11px] mono bg-black/50 p-2 rounded block break-all" id="webhookUrl">...</code>
+      <h4 class="text-sm font-semibold mt-4 mb-2">Verify Token</h4>
+      <code class="text-[11px] mono bg-black/50 p-2 rounded block" id="verifyToken">printing_pixels_verify_2026</code>
+      <p class="text-[11px] text-white/40 mt-3">Paste these in Meta Developers → Webhooks → Callback URL / Verify Token → Verify and Save</p>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1">
+    <!-- Train Tab -->
+    <div id="tab-train" class="tab">
+      <div class="flex items-center justify-between mb-6">
+        <div><h2 class="text-2xl font-bold">Train Your Bot</h2><p class="text-white/50 text-sm">Edit what your bot knows about Printing Pixels. Changes save instantly to brain.json</p></div>
+        <button id="saveBrain" class="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 font-medium"><i class="fa-solid fa-floppy-disk mr-2"></i> Save & Deploy</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-6">
+        <div class="p-5 rounded-2xl bg-[#16161f] border border-white/10">
+          <label class="text-xs font-semibold text-white/50 uppercase tracking-widest">Business Info</label>
+          <input id="business" class="mt-2 w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm" placeholder="Business name & address">
+          <input id="tagline" class="mt-3 w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm" placeholder="Tagline">
+        </div>
+        <div class="p-5 rounded-2xl bg-[#16161f] border border-white/10">
+          <label class="text-xs font-semibold text-white/50 uppercase tracking-widest">Workflow</label>
+          <textarea id="workflow" rows="4" class="mt-2 w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm mono">Tell us the idea -> Review & quote -> Approve proof -> We make it -> Pickup or delivery</textarea>
+          <p class="text-[11px] text-white/40 mt-1">Separate with comma or arrow</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-6 mt-6">
+        <div class="p-5 rounded-2xl bg-[#16161f] border border-white/10">
+          <label class="text-xs font-semibold text-white/50 uppercase tracking-widest">Essentials</label>
+          <textarea id="svc-essentials" rows="3" class="mt-2 w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm"></textarea>
+          <label class="text-xs font-semibold text-white/50 uppercase tracking-widest mt-4 block">Stickers & Vinyl</label>
+          <textarea id="svc-stickers" rows="3" class="mt-2 w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm"></textarea>
+        </div>
+        <div class="p-5 rounded-2xl bg-[#16161f] border border-white/10">
+          <label class="text-xs font-semibold text-white/50 uppercase tracking-widest">Signage</label>
+          <textarea id="svc-signage" rows="3" class="mt-2 w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm"></textarea>
+          <label class="text-xs font-semibold text-white/50 uppercase tracking-widest mt-4 block">Custom Merch</label>
+          <textarea id="svc-custom" rows="3" class="mt-2 w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm"></textarea>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-6 mt-6">
+        <div class="p-5 rounded-2xl bg-[#16161f] border border-white/10">
+          <label class="text-xs font-semibold text-white/50 uppercase tracking-widest">Quick Reply - Lead Time</label>
+          <textarea id="qr-leadtime" rows="3" class="mt-2 w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm"></textarea>
+          <label class="text-xs font-semibold text-white/50 uppercase tracking-widest mt-4 block">Quick Reply - Payment</label>
+          <textarea id="qr-payment" rows="3" class="mt-2 w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm"></textarea>
+        </div>
+        <div class="p-5 rounded-2xl bg-[#16161f] border border-white/10">
+          <label class="text-xs font-semibold text-white/50 uppercase tracking-widest">Quick Reply - Design</label>
+          <textarea id="qr-design" rows="3" class="mt-2 w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm"></textarea>
+          <label class="text-xs font-semibold text-white/50 uppercase tracking-widest mt-4 block">Quick Reply - Installation</label>
+          <textarea id="qr-install" rows="3" class="mt-2 w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm"></textarea>
+        </div>
+      </div>
+
+      <div class="mt-6 p-5 rounded-2xl bg-[#16161f] border border-white/10">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-white/50 uppercase tracking-widest">Live Test</label>
+          <span class="text-xs text-white/40">Test what bot will reply</span>
+        </div>
+        <div class="mt-3 flex gap-3">
+          <input id="testInput" class="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm" placeholder="Try: HM tarp 4x6?">
+          <button id="testBtn" class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-sm">Test</button>
+        </div>
+        <div id="testReply" class="mt-3 p-3 rounded-xl bg-black/50 border border-white/10 text-sm text-white/70 min-h-[60px]">Bot reply will appear here...</div>
+      </div>
+    </div>
+
+    <!-- Custom Replies -->
+    <div id="tab-custom" class="tab hidden">
+      <h2 class="text-2xl font-bold">Custom Keyword → Reply</h2>
+      <p class="text-white/50 text-sm mb-6">Train bot: when user says keyword, bot replies exactly what you set. Example: keyword "price list" → reply with your price list.</p>
+      <div class="p-5 rounded-2xl bg-[#16161f] border border-white/10">
+        <div class="grid grid-cols-3 gap-3 mb-3">
+          <input id="customKey" class="bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm col-span-1" placeholder="Keyword, e.g. price list, location, rush">
+          <input id="customReply" class="bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm col-span-2" placeholder="Exact reply the bot should give">
+        </div>
+        <button id="addCustom" class="px-4 py-2 rounded-xl bg-violet-600 text-sm">+ Add Training</button>
+        <div id="customList" class="mt-4 space-y-2"></div>
+      </div>
+    </div>
+
+    <!-- Leads Tab -->
+    <div id="tab-leads" class="tab hidden">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold">Leads & Conversations</h2>
+        <button id="exportCsv" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-sm"><i class="fa-solid fa-download mr-1"></i> Export CSV</button>
+      </div>
+      <div class="rounded-2xl bg-[#16161f] border border-white/10 overflow-hidden">
+        <div class="overflow-auto max-h-[70vh]">
+          <table class="w-full text-sm">
+            <thead class="sticky top-0 bg-[#16161f] border-b border-white/10 text-xs uppercase tracking-widest text-white/50"><tr><th class="text-left p-3">Time</th><th class="text-left p-3">Source</th><th class="text-left p-3">From</th><th class="text-left p-3">Message</th><th class="text-left p-3">Bot Reply</th></tr></thead>
+            <tbody id="leadsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="tab-settings" class="tab hidden">
+      <h2 class="text-2xl font-bold mb-6">Settings & Install</h2>
+      <div class="grid grid-cols-2 gap-6">
+        <div class="p-5 rounded-2xl bg-[#16161f] border border-white/10">
+          <h3 class="font-semibold">Connection Status</h3>
+          <div id="statusBox" class="mt-3 space-y-2 text-sm mono text-white/70">Loading...</div>
+        </div>
+        <div class="p-5 rounded-2xl bg-[#16161f] border border-white/10">
+          <h3 class="font-semibold">Website Widget</h3>
+          <p class="text-xs text-white/50 mt-1">Paste this before &lt;/body&gt; on printing-pixels.com</p>
+          <pre class="mt-3 p-3 rounded-xl bg-black/70 text-[11px] overflow-auto mono"><code id="widgetCode">&lt;script src="https://creative-connection-production-9f1c.up.railway.app/widget.js" data-bot="https://creative-connection-production-9f1c.up.railway.app"&gt;&lt;/script&gt;</code></pre>
+          <button class="mt-3 px-3 py-1.5 rounded-lg bg-white/10 text-xs" onclick="navigator.clipboard.writeText(document.getElementById('widgetCode').innerText)">Copy</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+let BRAIN = {};
+async function loadBrain(){
+  const r = await fetch('/api/brain'); BRAIN = await r.json();
+  document.getElementById('business').value = BRAIN.business||'';
+  document.getElementById('tagline').value = BRAIN.tagline||'';
+  document.getElementById('workflow').value = (BRAIN.workflow||[]).join(' -> ');
+  document.getElementById('svc-essentials').value = BRAIN.services?.essentials||'';
+  document.getElementById('svc-stickers').value = BRAIN.services?.stickers||'';
+  document.getElementById('svc-signage').value = BRAIN.services?.signage||'';
+  document.getElementById('svc-custom').value = BRAIN.services?.custom||'';
+  document.getElementById('qr-leadtime').value = BRAIN.quickReplies?.leadtime||'';
+  document.getElementById('qr-payment').value = BRAIN.quickReplies?.payment||'';
+  document.getElementById('qr-design').value = BRAIN.quickReplies?.design||'';
+  document.getElementById('qr-install').value = BRAIN.quickReplies?.install||'';
+  renderCustom();
+}
+function collectBrain(){
+  return {
+    business: document.getElementById('business').value,
+    tagline: document.getElementById('tagline').value,
+    workflow: document.getElementById('workflow').value.split(/,|->/).map(s=>s.trim()).filter(Boolean),
+    services: {
+      essentials: document.getElementById('svc-essentials').value,
+      stickers: document.getElementById('svc-stickers').value,
+      signage: document.getElementById('svc-signage').value,
+      custom: document.getElementById('svc-custom').value
+    },
+    quickReplies: {
+      leadtime: document.getElementById('qr-leadtime').value,
+      payment: document.getElementById('qr-payment').value,
+      design: document.getElementById('qr-design').value,
+      install: document.getElementById('qr-install').value
+    },
+    customReplies: BRAIN.customReplies||{}
+  }
+}
+document.getElementById('saveBrain').onclick = async ()=>{
+  const b = collectBrain();
+  const r = await fetch('/api/brain',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  const j = await r.json();
+  alert('Saved! Bot trained.');
+  BRAIN=j.brain;
+};
+
+function renderCustom(){
+  const c = document.getElementById('customList'); c.innerHTML='';
+  Object.entries(BRAIN.customReplies||{}).forEach(([k,v])=>{
+    const d=document.createElement('div'); d.className='flex gap-2 p-2 rounded-lg bg-black/50 border border-white/10 text-sm';
+    d.innerHTML=`<span class="font-semibold mono">${k}</span><span class="flex-1 truncate text-white/70">${v}</span><button class="text-red-400" onclick="delCustom('${k.replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i></button>`;
+    c.appendChild(d);
+  });
+}
+document.getElementById('addCustom').onclick = ()=>{
+  const k=document.getElementById('customKey').value.trim(); const v=document.getElementById('customReply').value.trim();
+  if(!k||!v) return alert('Need keyword and reply');
+  BRAIN.customReplies = BRAIN.customReplies||{}; BRAIN.customReplies[k]=v;
+  document.getElementById('customKey').value=''; document.getElementById('customReply').value='';
+  renderCustom(); document.getElementById('saveBrain').click();
+};
+function delCustom(k){ delete BRAIN.customReplies[k]; renderCustom(); }
+
+async function loadLeads(){
+  const r=await fetch('/api/leads'); const leads=await r.json();
+  document.getElementById('leadsCount').innerText=leads.length;
+  const body=document.getElementById('leadsBody'); body.innerHTML='';
+  leads.forEach(l=>{
+    const tr=document.createElement('tr'); tr.className='border-b border-white/5 hover:bg-white/[0.02]';
+    tr.innerHTML=`<td class="p-3 text-xs text-white/40 mono">${new Date(l.time).toLocaleString()}</td><td class="p-3"><span class="px-2 py-0.5 rounded-full text-xs ${l.source==='Facebook'?'bg-blue-500/20 text-blue-300':'bg-emerald-500/20 text-emerald-300'}">${l.source}</span></td><td class="p-3 mono text-xs">${(l.senderId||'').slice(0,12)}</td><td class="p-3 max-w-[200px] truncate">${l.text}</td><td class="p-3 max-w-[250px] truncate text-white/60">${(l.reply||'').slice(0,80)}</td>`;
+    body.appendChild(tr);
+  });
+}
+async function loadStatus(){
+  const r=await fetch('/api/status'); const s=await r.json();
+  document.getElementById('statusUrl').innerText = s.botUrl;
+  document.getElementById('botLink').href = s.botUrl;
+  document.getElementById('webhookUrl').innerText = s.webhookUrl;
+  document.getElementById('webhookLink').href = 'https://m.me/'+s.pageId;
+  document.getElementById('verifyToken').innerText = s.verifyToken;
+  document.getElementById('statusBox').innerHTML = `Page ID: ${s.pageId}<br>Has Token: ${s.hasToken?'YES ✅':'NO ❌ - set in Railway Variables'}<br>Leads: ${s.leadsCount}<br>Bot URL: ${s.botUrl}<br>Webhook: ${s.webhookUrl}`;
+  document.getElementById('widgetCode').innerText = `<script src="${s.botUrl}widget.js" data-bot="${s.botUrl}"><\/script>`;
+}
+document.getElementById('testBtn').onclick = async ()=>{
+  const msg=document.getElementById('testInput').value;
+  const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+  const j=await r.json(); document.getElementById('testReply').innerText=j.reply;
+};
+
+// tabs
+document.querySelectorAll('.tab-btn').forEach(b=> b.onclick=()=>{
+  document.querySelectorAll('.tab-btn').forEach(x=> x.className='tab-btn w-full text-left px-4 py-2.5 rounded-xl hover:bg-white/5 text-white/70');
+  b.className='tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-violet-600 text-white font-medium';
+  document.querySelectorAll('.tab').forEach(t=> t.classList.add('hidden'));
+  document.getElementById('tab-'+b.dataset.tab).classList.remove('hidden');
+  if(b.dataset.tab==='leads') loadLeads();
+});
+
+document.getElementById('exportCsv').onclick = async ()=>{
+  const r=await fetch('/api/leads'); const leads=await r.json();
+  let csv='Time,Source,From,Message,Reply\n';
+  leads.forEach(l=> csv+=`"${l.time}","${l.source}","${l.senderId}","${(l.text||'').replace(/"/g,'""')}","${(l.reply||'').replace(/"/g,'""')}"\n`);
+  const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='printing-pixels-leads.csv'; a.click();
+};
+
+loadBrain(); loadStatus(); loadLeads();
+setInterval(loadLeads, 10000);
+</script>
+</body>
+</html>
